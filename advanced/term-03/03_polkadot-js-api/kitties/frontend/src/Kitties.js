@@ -13,12 +13,39 @@ export default function Kitties (props) {
   const [kitties, setKitties] = useState([])
   const [status, setStatus] = useState('')
 
+  const [count,setCount] = useState()
+  const [dnaArr,setDnaArr] = useState([])
+  const [ownerArr,setOwnerArr] = useState([])
+
   const fetchKitties = () => {
     // TODO: 在这里调用 `api.query.kittiesModule.*` 函数去取得猫咪的信息。
     // 你需要取得：
     //   - 共有多少只猫咪
     //   - 每只猫咪的主人是谁
     //   - 每只猫咪的 DNA 是什么，用来组合出它的形态
+    async function fetchdata(){
+      let kittiesList = [];
+      let ownerList = [];  
+
+      api.query.kittiesModule.kittiesCount(d=>{
+        if(d.toHuman()>0){
+          console.log(d.toHuman());
+          setCount(d.toHuman());
+          for(let i=0;i<d.toHuman();i++){
+            api.queryMulti([
+              [api.query.kittiesModule.owner,i],
+              [api.query.kittiesModule.kitties,i]
+            ],([ov,dv])=>{
+              kittiesList.push(dv.unwrap().toU8a());
+              setDnaArr(kittiesList);
+              ownerList.push(ov.unwrap().toString());
+              setOwnerArr(ownerList);
+            });
+          }
+        }
+      });
+    }
+    fetchdata()
   }
 
   const populateKitties = () => {
@@ -31,12 +58,28 @@ export default function Kitties (props) {
     //  }, { id: ..., dna: ..., owner: ... }]
     //  ```
     // 这个 kitties 会传入 <KittyCards/> 然后对每只猫咪进行处理
-    const kitties = []
-    setKitties(kitties)
+    async function popKitties(){
+      let _kitties = [];
+      setTimeout(()=>{
+        console.log("owner---"+JSON.stringify(ownerArr));
+        for(let i=0;i<count;i++){
+          let arr = {
+            id:i,
+            dna:dnaArr[i],
+            owner:ownerArr[i]
+          };
+          _kitties.push(arr);
+        }
+        setTimeout(()=>{
+          setKitties(_kitties);
+        },300);
+      },300)
+    }
+    popKitties()
   }
 
-  useEffect(fetchKitties, [api, keyring])
-  useEffect(populateKitties, [])
+  useEffect(fetchKitties, [api, keyring, status])
+  useEffect(populateKitties, [ownerArr, dnaArr, kitties, status])
 
   return <Grid.Column width={16}>
     <h1>小毛孩</h1>
